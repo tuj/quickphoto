@@ -17,11 +17,11 @@
     android:id="@+id/button_capture"
     android:layout_width="80dp"
     android:layout_height="80dp"
-    android:layout_gravity="right|bottom"
+    android:layout_gravity="center_vertical|bottom"
     android:src="@drawable/camera_capture"
     android:background="@null"
-    android:layout_alignParentTop="true"
-    android:layout_alignParentRight="true"
-    android:layout_alignParentEnd="true"/>
+    android:contentDescription="@string/image_button_content"
+    android:layout_alignParentBottom="true"
+    android:layout_centerHorizontal="true"/>
 
 </RelativeLayout>

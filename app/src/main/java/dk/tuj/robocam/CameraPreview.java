@@ -41,7 +41,7 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
   }
 
   public void surfaceChanged(SurfaceHolder holder, int format, int w, int h) {
-    // If your preview can change or rotate, take care of those events here.
+    // If your preview can change or rotation, take care of those events here.
     // Make sure to stop the preview before resizing or reformatting it.
 
     if (mHolder.getSurface() == null){
@@ -56,7 +56,7 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
       // ignore: tried to stop a non-existent preview
     }
 
-    // set preview size and make any resize, rotate or
+    // set preview size and make any resize, rotation or
     // reformatting changes here
 
     // start preview with new settings
