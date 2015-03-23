@@ -28,3 +28,6 @@ proguard/
 /.idea/workspace.xml
 /.idea/libraries
 .DS_Store
+
+Configuration.java
+AndroidManifest.xml

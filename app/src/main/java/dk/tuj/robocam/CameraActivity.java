@@ -1,25 +1,26 @@
 package dk.tuj.robocam;
 
 import android.app.Activity;
-import android.content.Context;
-import android.content.pm.ActivityInfo;
-import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
 import android.hardware.Camera;
 import android.hardware.Camera.PictureCallback;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.Surface;
 import android.view.View;
-import android.view.animation.Animation;
-import android.view.animation.AnimationUtils;
-import android.view.animation.LayoutAnimationController;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
+import android.widget.Toast;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -29,9 +30,10 @@ import java.util.Locale;
 public class CameraActivity extends Activity {
   private Camera mCamera;
   private CameraPreview mPreview;
-  private static final String TAG = "RoboCam";
+  private static final String TAG = "RobotiCam";
   private byte[] imageData;
 
+  private Storage storage;
 
   @Override
   public void onCreate(Bundle savedInstanceState) {
@@ -39,6 +41,12 @@ public class CameraActivity extends Activity {
 
     setContentView(R.layout.activity_camera);
 
+    startCameraPage();
+
+    storage = new DropboxStorage(CameraActivity.this);
+  }
+
+  private void startCameraPage() {
     // Create an instance of Camera
     mCamera = getCameraInstance();
 
@@ -102,14 +110,54 @@ public class CameraActivity extends Activity {
     return c; // returns null if camera is unavailable
   }
 
-  /** Check if this device has a camera */
-  private boolean checkCameraHardware(Context context) {
-    if (context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA)){
-      // this device has a camera
+  private void saveToDropboxDone(Boolean result) {
+    Log.i(TAG, "SaveToDropbox done with result: " + result);
+
+    setContentView(R.layout.activity_done);
+
+    final Button saveButton = (Button) findViewById(R.id.button2);
+    saveButton.setOnClickListener(new View.OnClickListener() {
+      public void onClick(View v) {
+        startCameraPage();
+      }
+    });
+
+    if (result) {
+      Toast success = Toast.makeText(CameraActivity.this, "Saving to dropbox successful", Toast.LENGTH_LONG);
+      success.show();
+    }
+    else {
+      Toast error = Toast.makeText(CameraActivity.this, "Saving to dropbox failed", Toast.LENGTH_LONG);
+      error.show();
+    }
+  }
+
+  private class SaveToDropbox extends AsyncTask<DataFilenamePair, Void, Boolean> {
+    protected Boolean doInBackground(DataFilenamePair... dfps) {
+      for (DataFilenamePair dfp : dfps) {
+        try {
+          Bitmap storedBitmap = BitmapFactory.decodeByteArray(dfp.data, 0, dfp.data.length, null);
+
+          Matrix mat = new Matrix();
+          mat.postRotate(90);  // angle is the desired angle you wish to rotate
+          storedBitmap = Bitmap.createBitmap(storedBitmap, 0, 0, storedBitmap.getWidth(), storedBitmap.getHeight(), mat, true);
+
+          ByteArrayOutputStream stream = new ByteArrayOutputStream();
+          storedBitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
+
+          storage.saveData(stream.toByteArray(), dfp.filename);
+        }
+        catch (Exception e) {
+          Log.e(TAG, e.toString());
+          return false;
+        }
+      }
+
       return true;
-    } else {
-      // no camera on this device
-      return false;
+    }
+
+    protected void onPostExecute(Boolean result) {
+      saveToDropboxDone(result);
     }
   }
 
@@ -118,7 +166,6 @@ public class CameraActivity extends Activity {
     @Override
     public void onPictureTaken(byte[] data, Camera camera) {
       imageData = data;
-
       /*
 
       File pictureFile = getOutputMediaFile();
@@ -139,12 +186,32 @@ public class CameraActivity extends Activity {
 
        */
 
+      releaseCamera();
+
       showEnterNameScreen();
     }
   };
 
   private void showEnterNameScreen() {
     setContentView(R.layout.activity_save);
+
+    storage.connect();
+
+    final Button saveButton = (Button) findViewById(R.id.button);
+    saveButton.setOnClickListener(new View.OnClickListener() {
+      public void onClick(View v) {
+        EditText txtDescription = (EditText) findViewById(R.id.editText);
+
+        String filename = txtDescription.getText().toString();
+
+        DataFilenamePair ffp = new DataFilenamePair(imageData, filename);
+
+        setContentView(R.layout.activity_saving);
+
+        new SaveToDropbox().execute(ffp);
+      }
+    });
+
   }
 
   public static final int MEDIA_TYPE_IMAGE = 1;
@@ -178,19 +245,31 @@ public class CameraActivity extends Activity {
         filename + "_" + timeStamp + ".jpg");
   }
 
+  /**
+   * When returning to the app from storage authentication.
+   */
+  @Override
+  protected void onResume() {
+    super.onResume();
+
+    storage.onResume();
+  }
+
   @Override
   protected void onPause() {
     super.onPause();
     releaseCamera();              // release the camera immediately on pause event
   }
 
+  /**
+   * Release the camera.
+   */
   private void releaseCamera(){
     if (mCamera != null){
       mCamera.release();        // release the camera for other applications
       mCamera = null;
     }
   }
-
 
   @Override
   public boolean onCreateOptionsMenu(Menu menu) {

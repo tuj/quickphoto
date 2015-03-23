@@ -1,8 +1,9 @@
 <resources>
-  <string name="app_name">RoboCam</string>
+  <string name="app_name">RobotiCam</string>
 
   <string name="action_settings">Settings</string>
   <string name="give_image_name">Give the image a name&#8230;&#8230;&#8230;</string>
   <string name="image_button_content">Take image</string>
   <string name="save_to_dropbox">Save image to Dropbox</string>
+  <string name="saving_file">Saving to Dropbox</string>
 </resources>
